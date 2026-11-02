@@ -20,6 +20,7 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
+  final _input = TextEditingController();
   Timer? _debounce;
   List<User> _results = [];
   bool _loading = false;
@@ -74,6 +75,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return Scaffold(
       appBar: AppBar(
         title: TextField(
+          controller: _input,
           autofocus: true,
           autocorrect: false,
           onChanged: _onChanged,
@@ -82,12 +84,14 @@ class _SearchScreenState extends State<SearchScreen> {
             border: InputBorder.none,
           ),
         ),
-        bottom: _loading
-            ? const PreferredSize(
-                preferredSize: Size.fromHeight(2),
-                child: LinearProgressIndicator(minHeight: 2),
-              )
-            : null,
+        // Always present: toggling `bottom` between null and a widget changes
+        // the AppBar's structure and recreates the search field.
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(2),
+          child: _loading
+              ? const LinearProgressIndicator(minHeight: 2)
+              : const SizedBox(height: 2),
+        ),
       ),
       body: _query.isNotEmpty && _results.isEmpty && !_loading
           ? const Center(child: Text('Никого не нашли'))
@@ -109,6 +113,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _input.dispose();
     super.dispose();
   }
 }
