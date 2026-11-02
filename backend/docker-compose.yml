@@ -17,6 +17,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "127.0.0.1:${DB_PORT:-55432}:5432" # local access only, for tests and debugging
+    restart: unless-stopped
 
   server:
     build: .
