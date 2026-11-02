@@ -17,8 +17,11 @@ class ChatController extends ChangeNotifier {
   }
 
   static const _typingRefresh = Duration(seconds: 3);
-  // Longer than the sender's refresh interval: tolerates one lost event,
-  // yet the indicator never sticks if "stop" is lost.
+  // A pause this long without keystrokes counts as "stopped typing". Shorter
+  // pauses (between words) must not make the peer's indicator flicker.
+  static const _typingIdle = Duration(seconds: 2);
+  // Fallback for a lost "stop" event: longer than the sender's refresh
+  // interval, so one lost refresh is tolerated, yet the indicator never sticks.
   static const _typingTimeout = Duration(seconds: 6);
 
   final AppController _app;
@@ -35,6 +38,7 @@ class ChatController extends ChangeNotifier {
   String? error;
 
   Timer? _peerTypingTimer;
+  Timer? _typingIdleTimer;
   DateTime? _lastTypingSent;
   bool _foreground = true;
 
@@ -135,9 +139,14 @@ class ChatController extends ChangeNotifier {
         now.difference(_lastTypingSent!) > _typingRefresh) {
       _sendTyping(true);
     }
+    _typingIdleTimer?.cancel();
+    _typingIdleTimer = Timer(_typingIdle, () {
+      if (_lastTypingSent != null) _sendTyping(false);
+    });
   }
 
   void _sendTyping(bool active) {
+    if (!active) _typingIdleTimer?.cancel();
     _lastTypingSent = active ? DateTime.now() : null;
     _app.realtime.send('typing', {'dialog_id': dialog.id, 'active': active});
   }
@@ -238,6 +247,7 @@ class ChatController extends ChangeNotifier {
   @override
   void dispose() {
     if (_lastTypingSent != null) _sendTyping(false);
+    _typingIdleTimer?.cancel();
     _peerTypingTimer?.cancel();
     _sub.cancel();
     _app.realtime.status.removeListener(_onStatus);
