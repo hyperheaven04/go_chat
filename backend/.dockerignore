@@ -1,0 +1,4 @@
+.env
+*.md
+Makefile
+docker-compose.yml
